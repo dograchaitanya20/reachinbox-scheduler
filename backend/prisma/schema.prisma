@@ -37,6 +37,7 @@ model Email {
   status      String    @default("scheduled")
   messageId   String?
   error       String?
+  updatedAt   DateTime  @default(now()) @updatedAt
   @@index([userId, status, scheduledAt])
 }
 model SlackIntegration {
@@ -44,3 +45,4 @@ model SlackIntegration {
   user       User   @relation(fields: [userId], references: [id])
   webhookUrl String
 }
+

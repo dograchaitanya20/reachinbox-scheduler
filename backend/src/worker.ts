@@ -41,3 +41,6 @@ new Worker(QUEUE, async (job, token) => {
   }
 }, { connection: redis, concurrency: env.concurrency, limiter: { max: 1, duration: env.minDelayMs } });
 console.log(`worker up: concurrency=${env.concurrency}, min delay=${env.minDelayMs}ms, cap=${env.maxPerHour}/h/sender`);
+
+import { reconcile } from './reconcile';
+reconcile().catch(console.error);

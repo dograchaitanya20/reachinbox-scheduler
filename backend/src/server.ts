@@ -1,3 +1,6 @@
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import express from 'express';
 import cors from 'cors';
 import { z } from 'zod';
@@ -36,7 +39,7 @@ app.post('/api/schedule', async (req, res) => {
   const now = Date.now();
   await queue.addBulk(rows.map((r) => ({
     name: 'send', data: { emailId: r.id },
-    opts: { jobId: r.id, delay: Math.max(0, +r.scheduledAt - now), removeOnComplete: true },
+    opts: { jobId: r.id, delay: Math.max(0, +r.scheduledAt - now), removeOnComplete: { count: 1000 } },
   })));
   res.status(201).json({ scheduled: rows.length, firstAt: rows[0].scheduledAt, lastAt: rows[rows.length - 1].scheduledAt });
 });
@@ -48,4 +51,10 @@ app.get('/api/emails', async (req, res) => {
     orderBy: { scheduledAt: sent ? 'desc' : 'asc' }, take: 500,
   }));
 });
+const board = new ExpressAdapter(); board.setBasePath('/admin/queues');
+createBullBoard({ queues: [new BullMQAdapter(queue)], serverAdapter: board });
+app.use('/admin/queues', board.getRouter());
+
 app.listen(env.port, () => console.log(`API on :${env.port}`));
+
+
