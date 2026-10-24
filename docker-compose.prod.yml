@@ -32,11 +32,13 @@ services:
     env_file: ./backend/.env.prod
     depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_started } }
     restart: unless-stopped
+  frontend:
+    build: { context: ./frontend, args: { BACKEND_URL: "http://api:4000" } }
+    restart: unless-stopped
   caddy:
     image: caddy:2
     ports: ["80:80", "443:443"]
     volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
-    depends_on: [api]
+    depends_on: [api, frontend]
     restart: unless-stopped
 volumes: { pgdata: {}, redisdata: {}, esdata: {}, caddy_data: {}, caddy_config: {} }
-
