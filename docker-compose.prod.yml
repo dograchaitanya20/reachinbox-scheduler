@@ -32,4 +32,11 @@ services:
     env_file: ./backend/.env.prod
     depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_started } }
     restart: unless-stopped
-volumes: { pgdata: {}, redisdata: {}, esdata: {} }
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    depends_on: [api]
+    restart: unless-stopped
+volumes: { pgdata: {}, redisdata: {}, esdata: {}, caddy_data: {}, caddy_config: {} }
+
