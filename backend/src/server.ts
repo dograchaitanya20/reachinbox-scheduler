@@ -1,3 +1,4 @@
+import { extraRoutes } from './extras';
 import { es, ensureIndex, indexEmails } from './search';
 import { slackRoutes } from './slack';
 import { createBullBoard } from '@bull-board/api';
@@ -22,13 +23,14 @@ const schema = z.object({
   startTime: z.coerce.date(),
   delaySec: z.number().min(0).default(2),
   hourlyLimit: z.number().int().min(1).default(env.maxPerHour),
+  senderId: z.string().optional(),
 });
 app.post('/api/schedule', async (req, res) => {
   const p = schema.safeParse(req.body);
   if (!p.success) return res.status(400).json(p.error.flatten());
   const { subject, body, startTime, delaySec } = p.data;
   const leads = [...new Set(p.data.leads.map((l) => l.toLowerCase()))];
-  const senders = await prisma.sender.findMany({ orderBy: { id: 'asc' } });
+  const senders = await prisma.sender.findMany({ where: p.data.senderId ? { id: p.data.senderId } : {}, orderBy: { id: 'asc' } });
   if (!senders.length) return res.status(409).json({ error: 'No senders. Run: npm run seed' });
   const user = await devUser();
   const limit = Math.min(p.data.hourlyLimit, env.maxPerHour);
@@ -66,7 +68,9 @@ app.get('/api/search', async (req, res) => {
   res.json(r.hits.hits.map((h) => ({ id: h._id, ...(h._source as object) })));
 });
 app.use('/api/slack', slackRoutes(devUser));
+app.use('/api', extraRoutes(devUser));
 ensureIndex().catch((e) => console.error('es unavailable:', e.message));app.listen(env.port, () => console.log(`API on :${env.port}`));
+
 
 
 

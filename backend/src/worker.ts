@@ -37,7 +37,7 @@ new Worker(QUEUE, async (job, token) => {
   }
   // 3. send
   try {
-    const info = await transport(e.sender).sendMail({ from: e.sender.user, to: e.to, subject: e.subject, text: e.body });
+    const info = await transport(e.sender).sendMail({ from: e.sender.user, to: e.to, subject: e.subject, html: e.body, text: e.body.replace(/<[^>]+>/g, ' ') });
     await prisma.email.update({ where: { id }, data: { status: 'sent', sentAt: new Date(), messageId: info.messageId } });
     esUpdate(id, { status: 'sent', sentAt: new Date() });
     console.log('sent', e.to, nodemailer.getTestMessageUrl(info));
@@ -50,4 +50,5 @@ console.log(`worker up: concurrency=${env.concurrency}, min delay=${env.minDelay
 
 import { reconcile } from './reconcile';
 reconcile().catch(console.error);
+
 
