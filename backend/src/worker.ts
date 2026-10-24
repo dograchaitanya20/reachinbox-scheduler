@@ -1,3 +1,4 @@
+import type { Transporter } from 'nodemailer';
 import { esUpdate } from './search';
 import { notifyLimit } from './slack';
 import { Worker, DelayedError } from 'bullmq';
@@ -14,7 +15,7 @@ if c >= tonumber(ARGV[1]) then return 0 end
 redis.call('INCR', KEYS[1])
 redis.call('EXPIRE', KEYS[1], 7200)
 return 1`;
-const cache = new Map<string, nodemailer.Transporter>();
+const cache = new Map<string, Transporter>();
 const transport = (s: Sender) => {
   if (!cache.has(s.id)) cache.set(s.id, nodemailer.createTransport({ host: s.host, port: s.port, auth: { user: s.user, pass: s.pass } }));
   return cache.get(s.id)!;
@@ -50,5 +51,6 @@ console.log(`worker up: concurrency=${env.concurrency}, min delay=${env.minDelay
 
 import { reconcile } from './reconcile';
 reconcile().catch(console.error);
+
 
 
