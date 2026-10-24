@@ -4,3 +4,7 @@ dist
 .env.*
 !.env.example
 backend/senders.json
+.next
+.next/
+frontend/.next
+frontend/.next/
