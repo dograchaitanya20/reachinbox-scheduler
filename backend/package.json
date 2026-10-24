@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
     "worker": "tsx watch src/worker.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "reindex": "tsx src/reindex.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
   "dependencies": {
     "@bull-board/api": "^9.10.5",
     "@bull-board/express": "^9.10.5",
+    "@elastic/elasticsearch": "^8.19.2",
     "@prisma/client": "^6.19.3",
     "bullmq": "^6.4.0",
     "cookie-parser": "^1.4.7",

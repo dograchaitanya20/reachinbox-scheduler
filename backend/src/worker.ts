@@ -1,3 +1,5 @@
+import { esUpdate } from './search';
+import { notifyLimit } from './slack';
 import { Worker, DelayedError } from 'bullmq';
 import nodemailer from 'nodemailer';
 import type { Sender } from '@prisma/client';
@@ -28,6 +30,8 @@ new Worker(QUEUE, async (job, token) => {
   if (!(await redis.eval(LUA, 1, `rl:${e.senderId}:${hk}`, env.maxPerHour))) {
     const next = (hk + 1) * H + e.seq; // next hour window; +seq keeps original order
     await prisma.email.update({ where: { id }, data: { status: 'scheduled', scheduledAt: new Date(next) } });
+    esUpdate(id, { status: 'scheduled', scheduledAt: new Date(next) });
+    void notifyLimit(e.userId, e.senderId, e.sender.user, hk);
     await job.moveToDelayed(next, token); // rescheduled, never dropped
     throw new DelayedError();
   }
@@ -35,12 +39,15 @@ new Worker(QUEUE, async (job, token) => {
   try {
     const info = await transport(e.sender).sendMail({ from: e.sender.user, to: e.to, subject: e.subject, text: e.body });
     await prisma.email.update({ where: { id }, data: { status: 'sent', sentAt: new Date(), messageId: info.messageId } });
+    esUpdate(id, { status: 'sent', sentAt: new Date() });
     console.log('sent', e.to, nodemailer.getTestMessageUrl(info));
   } catch (err) {
     await prisma.email.update({ where: { id }, data: { status: 'failed', error: String(err) } });
+    esUpdate(id, { status: 'failed' });
   }
 }, { connection: redis, concurrency: env.concurrency, limiter: { max: 1, duration: env.minDelayMs } });
 console.log(`worker up: concurrency=${env.concurrency}, min delay=${env.minDelayMs}ms, cap=${env.maxPerHour}/h/sender`);
 
 import { reconcile } from './reconcile';
 reconcile().catch(console.error);
+

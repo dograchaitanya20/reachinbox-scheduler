@@ -1,3 +1,5 @@
+import { es, ensureIndex, indexEmails } from './search';
+import { slackRoutes } from './slack';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
@@ -36,6 +38,7 @@ app.post('/api/schedule', async (req, res) => {
     to, subject, body, seq: i, scheduledAt: new Date(slots[i].at),
   }));
   await prisma.email.createMany({ data: rows });
+await indexEmails(rows);
   const now = Date.now();
   await queue.addBulk(rows.map((r) => ({
     name: 'send', data: { emailId: r.id },
@@ -55,6 +58,17 @@ const board = new ExpressAdapter(); board.setBasePath('/admin/queues');
 createBullBoard({ queues: [new BullMQAdapter(queue)], serverAdapter: board });
 app.use('/admin/queues', board.getRouter());
 
-app.listen(env.port, () => console.log(`API on :${env.port}`));
+app.get('/api/search', async (req, res) => {
+  const user = await devUser(); const q = String(req.query.q ?? '').trim();
+  const r = await es.search({ index: 'emails', size: 50, sort: [{ scheduledAt: 'desc' }], query: { bool: {
+    filter: [{ term: { userId: user.id } }],
+    must: q ? [{ multi_match: { query: q, fields: ['to', 'subject', 'body'], fuzziness: 'AUTO' } }] : [{ match_all: {} }] } } });
+  res.json(r.hits.hits.map((h) => ({ id: h._id, ...(h._source as object) })));
+});
+app.use('/api/slack', slackRoutes(devUser));
+ensureIndex().catch((e) => console.error('es unavailable:', e.message));app.listen(env.port, () => console.log(`API on :${env.port}`));
+
+
+
 
 
