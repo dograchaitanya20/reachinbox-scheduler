@@ -139,6 +139,11 @@ app.get('/api/search', async (req, res) => {
 app.use('/api/slack', slackRoutes(getUser));
 app.use('/api', extraRoutes(getUser));
 
-ensureIndex().catch((e) => console.error('es unavailable:', e.message));
+const initEs = (n = 0) => ensureIndex().catch((e) => {
+    console.error('es unavailable:', e.message);
+    if (n < 20) setTimeout(() => initEs(n + 1), 5000);
+});
+initEs();
 
 app.listen(env.port, () => console.log(`API on :${env.port}`));
+
