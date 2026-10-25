@@ -139,6 +139,7 @@ app.use('/admin/queues', board.getRouter());
 app.get('/api/search', async (req, res) => {
   const user = (req as any).user as AuthUser;
   const q = String(req.query.q ?? '').trim();
+  const cleanQ = q.replace(/[*?+~^=!'":\\]/g, ' ');
   const r = await es.search({
     index: 'emails',
     size: 50,
@@ -146,7 +147,20 @@ app.get('/api/search', async (req, res) => {
     query: {
       bool: {
         filter: [{ term: { userId: user.id } }],
-        must: q ? [{ multi_match: { query: q, fields: ['to', 'subject', 'body'], fuzziness: 'AUTO' } }] : [{ match_all: {} }],
+        must: q
+          ? [
+              {
+                bool: {
+                  should: [
+                    { multi_match: { query: q, fields: ['to', 'subject', 'body'], fuzziness: 'AUTO' } },
+                    { multi_match: { query: q, fields: ['to', 'subject', 'body'], type: 'phrase_prefix' } },
+                    { query_string: { query: `*${cleanQ.trim()}*`, fields: ['to', 'subject', 'body'], default_operator: 'AND' } },
+                  ],
+                  minimum_should_match: 1,
+                },
+              },
+            ]
+          : [{ match_all: {} }],
       },
     },
   });
