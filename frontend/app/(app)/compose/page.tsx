@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Paperclip, Clock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,7 @@ import type { SchedulePayload } from '@/types';
 
 export default function ComposePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: senders = [] } = useSenders();
 
   // Form states
@@ -87,6 +89,8 @@ export default function ComposePage() {
       }
 
       const res = await api.scheduleEmails(payload);
+      await queryClient.invalidateQueries({ queryKey: ['emails'] });
+      await queryClient.invalidateQueries({ queryKey: ['counts'] });
       toast.success(`${res.scheduled} emails scheduled`);
       router.push('/scheduled');
     } catch (err) {

@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/Button';
 import { Popover } from '@/components/ui/Popover';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useEmails } from '@/hooks/useEmailQueries';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface EmailListProps {
   tab: 'scheduled' | 'sent';
 }
 
 export function EmailList({ tab }: EmailListProps) {
+  const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = React.useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
@@ -113,7 +115,11 @@ export function EmailList({ tab }: EmailListProps) {
           {/* Refresh Button */}
           <button
             type="button"
-            onClick={() => refetch()}
+            onClick={async () => {
+              await queryClient.invalidateQueries({ queryKey: ['emails'] });
+              await queryClient.invalidateQueries({ queryKey: ['counts'] });
+              refetch();
+            }}
             disabled={isRefetching || isLoading}
             className="p-2 rounded-full hover:bg-neutral-100 text-neutral-500 hover:text-neutral-800 transition-colors disabled:opacity-50"
             title="Refresh list"
