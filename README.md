@@ -3,8 +3,10 @@
 A production-style email scheduler: schedule bulk emails through an API or dashboard, send them at exact times with **BullMQ delayed jobs (no cron)**, enforce per-sender hourly limits, survive restarts without losing or duplicating emails, and alert Slack when a limit is hit.
 
 - **Live app:** https://reachinbox-chaitanya.centralindia.cloudapp.azure.com
-- **Demo video:** `<add link>`
-- **Bull-board (login required):** `/admin/queues`
+- **Demo video:** https://drive.google.com/drive/folders/1l8__9MjoJi2zr2qCVUlcnen-G28MFL5t?usp=sharing
+- **Bull-board (login required):** https://reachinbox-chaitanya.centralindia.cloudapp.azure.com/admin/queues
+- **Repository:** https://github.com/dograchaitanya20/reachinbox-scheduler
+- **Author:** Chaitanya Dogra (B.Tech CSE, Lovely Professional University) — Invited reviewers: `mitrajit`, `Yadav036`
 
 ## Stack
 
@@ -99,7 +101,13 @@ Next.js ──► Express API ──► PostgreSQL  (source of truth)
 
 **Slack alerts.** "Connect Slack" runs a real OAuth flow (`incoming-webhook` scope); the webhook URL is stored per user. When a sender hits its cap, a message is posted to the user's channel, once per sender per hour window (Redis `SET NX`). If the user has not connected Slack, nothing is sent and nothing fails; connecting later works immediately, with no redeploy.
 
-**Search.** Emails are indexed in Elasticsearch on creation and updated on every status change. Writes to Elasticsearch never block scheduling or sending; `npm run reindex` repairs any drift. The API retries index creation at startup until Elasticsearch is ready.
+**Search.** Emails are indexed in Elasticsearch on creation and updated on every status change. The search implementation leverages multi-match with `phrase_prefix` and wildcard `query_string` (`*query*`) across `subject`, `recipient`, and `body`, ensuring sub-string, unspaced, and partial matches return instantly. Writes to Elasticsearch never block scheduling or sending; `npm run reindex` repairs any drift. The API retries index creation at startup until Elasticsearch is ready.
+
+**Frontend & Scheduling UX.** Built on Next.js 14 App Router with Tailwind CSS, strictly matching the Figma specification across all screens. The composer features:
+- Recipient email chips with instant validation, drag-and-drop / file upload for `.csv` and `.txt` files, and dynamic recipient count.
+- TipTap rich text editor with clean HTML output.
+- **Send Later Picker:** Date and time pickers with a dedicated **"In 4 minutes (Restart test)"** quick preset designed for rapid crash-recovery verification, auto-applied selections, timezone-safe local-to-UTC calculation, and an active countdown banner.
+- **Instant Cache Invalidation:** Powered by TanStack Query (`staleTime: 0`) ensuring newly scheduled emails immediately appear in `/scheduled` and counter badges update in real time without stale-cache locks.
 
 ## API
 

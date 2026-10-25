@@ -8,3 +8,6 @@ backend/senders.json
 .next/
 frontend/.next
 frontend/.next/
+cover_letter.html
+generate-pdf.js
+*.pdf
