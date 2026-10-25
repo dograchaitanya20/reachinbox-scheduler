@@ -181,6 +181,26 @@ export default function ComposePage() {
         </div>
       </div>
 
+      {/* Scheduled Time Banner (when Send Later is active) */}
+      {scheduledTime && (
+        <div className="bg-[#FFF1E3] border-b border-[#FFE0C2] px-6 py-2 flex items-center justify-between text-xs text-[#D4570F]">
+          <div className="flex items-center gap-2 font-medium">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>
+              Scheduled to send on: <strong>{scheduledTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</strong>
+              {' '}(in {Math.max(1, Math.round((scheduledTime.getTime() - Date.now()) / 60000))} min)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setScheduledTime(null)}
+            className="text-xs font-semibold underline hover:text-[#9A3412] ml-4"
+          >
+            Clear (send now)
+          </button>
+        </div>
+      )}
+
       {/* Main Form Fields */}
       <div className="flex-1 overflow-y-auto px-8 py-6 max-w-4xl w-full mx-auto flex flex-col gap-4">
         {/* From Row */}

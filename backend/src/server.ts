@@ -76,7 +76,17 @@ app.post('/api/schedule', async (req, res) => {
   if (!senders.length) return res.status(409).json({ error: 'No senders. Run: npm run seed' });
   const user = (req as any).user as AuthUser;
   const limit = Math.min(p.data.hourlyLimit, env.maxPerHour);
-  const slots = plan(leads.length, senders.length, Math.max(+startTime, Date.now()), delaySec * 1000, limit);
+
+  const serverNow = Date.now();
+  const planStart = Math.max(+startTime, serverNow);
+  console.log('[schedule] raw startTime from client:', req.body.startTime);
+  console.log('[schedule] parsed startTime:', startTime.toISOString(), 'epoch:', +startTime);
+  console.log('[schedule] server now:', new Date(serverNow).toISOString(), 'epoch:', serverNow);
+  console.log('[schedule] planStart:', new Date(planStart).toISOString(), 'epoch:', planStart);
+  console.log('[schedule] startTime is in future:', +startTime > serverNow, 'by', ((+startTime - serverNow) / 60000).toFixed(1), 'min');
+  console.log('[schedule] delaySec:', delaySec, 'leads:', leads.length, 'senders:', senders.length, 'limit:', limit);
+
+  const slots = plan(leads.length, senders.length, planStart, delaySec * 1000, limit);
   const rows = leads.map((to, i) => {
     const slot = slots[i]!;
     const sender = senders[slot.senderIdx]!;
@@ -91,6 +101,13 @@ app.post('/api/schedule', async (req, res) => {
       scheduledAt: new Date(slot.at),
     };
   });
+
+  // Log first few slots for debugging
+  rows.slice(0, 3).forEach((r, i) => {
+    const delayMs = +r.scheduledAt - serverNow;
+    console.log(`[schedule] row[${i}]: scheduledAt=${r.scheduledAt.toISOString()}, delay=${delayMs}ms (${(delayMs / 60000).toFixed(1)}min)`);
+  });
+
   await prisma.email.createMany({ data: rows });
   await indexEmails(rows);
   const now = Date.now();
